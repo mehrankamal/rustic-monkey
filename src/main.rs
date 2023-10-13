@@ -1,6 +1,14 @@
+use std::io;
+
 mod token;
 mod lexer;
+mod repl;
 
 fn main() {
-    println!("Hello, world!");
+    let stdin = io::stdin();
+    let stdout = io::stdout();
+
+    if let Err(e) = repl::start(stdin.lock(), stdout.lock()) {
+        eprintln!("Error: {}", e);
+    }
 }
