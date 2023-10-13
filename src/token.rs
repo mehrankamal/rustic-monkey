@@ -4,8 +4,8 @@ pub enum Token {
     Illegal,
     Eof,
 
-    Ident,
-    Int,
+    Ident(String),
+    Int(i64),
 
     Assign,
     Plus,
