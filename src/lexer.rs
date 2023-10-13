@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::token::Token;
-use crate::token::Token::{Assign, Asterisk, Bang, Comma, Else, Eof, False, Function, GT, Ident, If, Illegal, Int, LBrace, Let, LParen, LT, Minus, Plus, RBrace, Return, RParen, Semicolon, Slash, True};
+use crate::token::Token::*;
 
 struct Lexer<'a> {
     input: &'a str,
@@ -127,7 +127,7 @@ fn is_letter(ch: u8) -> bool {
 #[cfg(test)]
 mod lexer_tests {
     use crate::lexer::Lexer;
-    use crate::token::Token::{Assign, Asterisk, Bang, Comma, Else, Eof, False, Function, GT, Ident, If, Int, LBrace, Let, LParen, LT, Minus, Plus, RBrace, Return, RParen, Semicolon, Slash, True};
+    use crate::token::Token::*;
 
     #[test]
     fn test_next_token() {
@@ -146,7 +146,10 @@ if (5 < 10) {
     return true;
 } else {
     return false;
-}"#;
+}
+
+
+"#;
 
         let test_cases = vec![
             Let,
@@ -214,6 +217,13 @@ if (5 < 10) {
             False,
             Semicolon,
             RBrace,
+            // Int(10),
+            // Eq,
+            // Int(10),
+            // Semicolon,
+            // Int(10),
+            // NotEq,
+            // Int(9),
             Eof
         ];
 
