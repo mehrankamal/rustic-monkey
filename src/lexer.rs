@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::token::Token;
-use crate::token::Token::{Assign, Comma, Function, Ident, Illegal, Int, LBrace, Let, LParen, Plus, RBrace, RParen, Semicolon};
+use crate::token::Token::{Assign, Asterisk, Bang, Comma, Function, GT, Ident, Illegal, Int, LBrace, Let, LParen, LT, Minus, Plus, RBrace, RParen, Semicolon, Slash};
 
 struct Lexer<'a> {
     input: &'a str,
@@ -40,6 +40,12 @@ impl<'a> Lexer<'a> {
         let tok = match self.ch {
             b'=' => Assign,
             b'+' => Plus,
+            b'-' => Minus,
+            b'!' => Bang,
+            b'*' => Asterisk,
+            b'/' => Slash,
+            b'<' => LT,
+            b'>' => GT,
             b'(' => LParen,
             b')' => RParen,
             b'{' => LBrace,
@@ -114,7 +120,7 @@ fn is_letter(ch: u8) -> bool {
 #[cfg(test)]
 mod lexer_tests {
     use crate::lexer::Lexer;
-    use crate::token::Token::{Assign, Comma, Function, Ident, Int, LBrace, Let, LParen, Plus, RBrace, RParen, Semicolon};
+    use crate::token::Token::{Assign, Asterisk, Bang, Comma, Function, GT, Ident, Int, LBrace, Let, LParen, LT, Minus, Plus, RBrace, RParen, Semicolon, Slash};
 
     #[test]
     fn test_next_token() {
@@ -125,7 +131,9 @@ let add = fn(x, y) {
     x + y;
 };
 
-let result = add(five, ten);"#;
+let result = add(five, ten);
+!-/*5;
+5 < 10 > 5;"#;
 
         let test_cases = vec![
             Let,
@@ -164,6 +172,18 @@ let result = add(five, ten);"#;
             Ident(String::from("ten")),
             RParen,
             Semicolon,
+            Bang,
+            Minus,
+            Slash,
+            Asterisk,
+            Int(5),
+            Semicolon,
+            Int(5),
+            LT,
+            Int(10),
+            GT,
+            Int(5),
+            Semicolon
         ];
 
         let mut lexer = Lexer::new(input);
