@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::token::Token;
-use crate::token::Token::{Assign, Asterisk, Bang, Comma, Function, GT, Ident, Illegal, Int, LBrace, Let, LParen, LT, Minus, Plus, RBrace, RParen, Semicolon, Slash};
+use crate::token::Token::{Assign, Asterisk, Bang, Comma, Eof, Function, GT, Ident, Illegal, Int, LBrace, Let, LParen, LT, Minus, Plus, RBrace, RParen, Semicolon, Slash};
 
 struct Lexer<'a> {
     input: &'a str,
@@ -18,12 +18,12 @@ impl<'a> Lexer<'a> {
             ch: 0,
         };
 
-        lexer.read_char();
+        lexer.consume_char();
 
         lexer
     }
 
-    fn read_char(&mut self) {
+    fn consume_char(&mut self) {
         if self.read_position >= self.input.len() {
             self.ch = 0
         } else {
@@ -52,44 +52,45 @@ impl<'a> Lexer<'a> {
             b'}' => RBrace,
             b',' => Comma,
             b';' => Semicolon,
+            0 => Eof,
 
             _ => {
                 if is_letter(self.ch) {
-                    let ident_literal = self.read_ident();
+                    let ident_literal = self.consume_ident();
                     return lookup_ident(&ident_literal)
                 } else if is_digit(self.ch) {
-                    return self.read_number()
+                    return self.consume_number()
                 } else {
                     Illegal
                 }
             },
         };
 
-        self.read_char();
+        self.consume_char();
 
         return tok
     }
 
     fn skip_whitespaces(&mut self) {
         while self.ch == b' ' || self.ch == b'\n' || self.ch == b'\t' || self.ch == b'\r' {
-            self.read_char();
+            self.consume_char();
         }
     }
 
-    fn read_ident(&mut self) -> String {
+    fn consume_ident(&mut self) -> String {
         let current_position = self.position;
         while is_letter(self.ch) {
-            self.read_char()
+            self.consume_char()
         }
 
         return String::from(&self.input[current_position..self.position])
     }
 
-    fn read_number(&mut self) -> Token {
+    fn consume_number(&mut self) -> Token {
         let start_position = self.position;
 
         while is_digit(self.ch) {
-            self.read_char()
+            self.consume_char()
         }
 
         Int(self.input[start_position..self.position].parse::<i64>().unwrap())
@@ -120,7 +121,7 @@ fn is_letter(ch: u8) -> bool {
 #[cfg(test)]
 mod lexer_tests {
     use crate::lexer::Lexer;
-    use crate::token::Token::{Assign, Asterisk, Bang, Comma, Function, GT, Ident, Int, LBrace, Let, LParen, LT, Minus, Plus, RBrace, RParen, Semicolon, Slash};
+    use crate::token::Token::{Assign, Asterisk, Bang, Comma, Eof, Function, GT, Ident, Int, LBrace, Let, LParen, LT, Minus, Plus, RBrace, RParen, Semicolon, Slash};
 
     #[test]
     fn test_next_token() {
@@ -183,7 +184,8 @@ let result = add(five, ten);
             Int(10),
             GT,
             Int(5),
-            Semicolon
+            Semicolon,
+            Eof
         ];
 
         let mut lexer = Lexer::new(input);
