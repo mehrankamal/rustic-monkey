@@ -6,6 +6,8 @@ pub enum Token {
 
     Ident(String),
     Int(i64),
+    True,
+    False,
 
     Assign,
     Plus,
@@ -26,5 +28,8 @@ pub enum Token {
     RBrace,
 
     Function,
-    Let
+    Let,
+    If,
+    Else,
+    Return,
 }

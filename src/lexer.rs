@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::token::Token;
-use crate::token::Token::{Assign, Asterisk, Bang, Comma, Eof, Function, GT, Ident, Illegal, Int, LBrace, Let, LParen, LT, Minus, Plus, RBrace, RParen, Semicolon, Slash};
+use crate::token::Token::{Assign, Asterisk, Bang, Comma, Else, Eof, False, Function, GT, Ident, If, Illegal, Int, LBrace, Let, LParen, LT, Minus, Plus, RBrace, Return, RParen, Semicolon, Slash, True};
 
 struct Lexer<'a> {
     input: &'a str,
@@ -101,6 +101,12 @@ fn lookup_ident(name: &String) -> Token {
     let mut keywords_lookup: HashMap<String, Token> = HashMap::new();
     keywords_lookup.insert("fn".to_string(), Function);
     keywords_lookup.insert("let".to_string(), Let);
+    keywords_lookup.insert("if".to_string(), If);
+    keywords_lookup.insert("else".to_string(), Else);
+    keywords_lookup.insert("return".to_string(), Return);
+    keywords_lookup.insert("true".to_string(), True);
+    keywords_lookup.insert("false".to_string(), False);
+
 
 
     if keywords_lookup.contains_key(name) {
@@ -121,7 +127,7 @@ fn is_letter(ch: u8) -> bool {
 #[cfg(test)]
 mod lexer_tests {
     use crate::lexer::Lexer;
-    use crate::token::Token::{Assign, Asterisk, Bang, Comma, Eof, Function, GT, Ident, Int, LBrace, Let, LParen, LT, Minus, Plus, RBrace, RParen, Semicolon, Slash};
+    use crate::token::Token::{Assign, Asterisk, Bang, Comma, Else, Eof, False, Function, GT, Ident, If, Int, LBrace, Let, LParen, LT, Minus, Plus, RBrace, Return, RParen, Semicolon, Slash, True};
 
     #[test]
     fn test_next_token() {
@@ -134,7 +140,13 @@ let add = fn(x, y) {
 
 let result = add(five, ten);
 !-/*5;
-5 < 10 > 5;"#;
+5 < 10 > 5;
+
+if (5 < 10) {
+    return true;
+} else {
+    return false;
+}"#;
 
         let test_cases = vec![
             Let,
@@ -185,6 +197,23 @@ let result = add(five, ten);
             GT,
             Int(5),
             Semicolon,
+            If,
+            LParen,
+            Int(5),
+            LT,
+            Int(10),
+            RParen,
+            LBrace,
+            Return,
+            True,
+            Semicolon,
+            RBrace,
+            Else,
+            LBrace,
+            Return,
+            False,
+            Semicolon,
+            RBrace,
             Eof
         ];
 
