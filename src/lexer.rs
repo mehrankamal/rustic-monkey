@@ -38,10 +38,22 @@ impl<'a> Lexer<'a> {
         self.skip_whitespaces();
 
         let tok = match self.ch {
-            b'=' => Assign,
+            b'=' => if self.peek_char(b'=') {
+                        self.consume_char();
+                        Eq
+                    } else {
+                        Assign
+                    }
+            ,
             b'+' => Plus,
             b'-' => Minus,
-            b'!' => Bang,
+            b'!' => if self.peek_char(b'=') {
+                        self.consume_char();
+                        NotEq
+                    } else {
+                        Bang
+                    }
+            ,
             b'*' => Asterisk,
             b'/' => Slash,
             b'<' => LT,
@@ -94,6 +106,14 @@ impl<'a> Lexer<'a> {
         }
 
         Int(self.input[start_position..self.position].parse::<i64>().unwrap())
+    }
+
+    fn peek_char(&self, peek: u8) -> bool {
+        if self.read_position >= self.input.len() {
+            0 == peek
+        } else {
+            self.input.as_bytes()[self.read_position] == peek
+        }
     }
 }
 
@@ -148,7 +168,8 @@ if (5 < 10) {
     return false;
 }
 
-
+10 == 10;
+10 != 9;
 "#;
 
         let test_cases = vec![
@@ -217,13 +238,14 @@ if (5 < 10) {
             False,
             Semicolon,
             RBrace,
-            // Int(10),
-            // Eq,
-            // Int(10),
-            // Semicolon,
-            // Int(10),
-            // NotEq,
-            // Int(9),
+            Int(10),
+            Eq,
+            Int(10),
+            Semicolon,
+            Int(10),
+            NotEq,
+            Int(9),
+            Semicolon,
             Eof
         ];
 
