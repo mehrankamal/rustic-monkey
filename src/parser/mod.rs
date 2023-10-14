@@ -60,8 +60,8 @@ impl<'a> Parser<'a> {
 
         let mut ident_name = "".to_string();
 
-        match self.cur_tok.clone() {
-            Token::Ident(name) => { ident_name = name },
+        let ident = match self.cur_tok.clone() {
+            Token::Ident(name) => Ident{ name },
             other => return Err(format!("{} is not an identifier", other))
         };
 
@@ -72,7 +72,7 @@ impl<'a> Parser<'a> {
             self.next_token();
         }
 
-        Ok(Stmt::Let(Let{ ident: Ident{ name: ident_name }, expr: None}))
+        Ok(Stmt::Let(Let{ ident, expr: None}))
     }
 
     fn curr_tok_is(&self, tok: &Token) -> bool {
