@@ -4,6 +4,7 @@ use std::io::Write;
 mod token;
 mod lexer;
 mod repl;
+mod parser;
 
 fn main() {
     let stdin = io::stdin();

@@ -1,3 +1,5 @@
+use std::fmt;
+use std::fmt::Formatter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
@@ -35,4 +37,10 @@ pub enum Token {
     If,
     Else,
     Return,
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "kind: {}", self)
+    }
 }
