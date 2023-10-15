@@ -51,8 +51,20 @@ impl<'a> Parser<'a> {
     fn parse_stmt(&mut self) -> Result<Stmt, ParseError> {
         match self.cur_tok {
             Token::Let => Ok(self.parse_let_stmt()?),
+            Token::Return => Ok(self.parse_return_stmt()?),
             _ => Err("Parsing failed".to_string()),
         }
+    }
+
+    fn parse_return_stmt(&mut self) -> Result<Stmt, ParseError> {
+
+        // TODO: To parse expression for return stmt once done with parsing them.
+        while !self.curr_tok_is(&Token::Semicolon) {
+            self.next_token();
+        }
+
+
+        Ok(Stmt::Return(None))
     }
 
     fn parse_let_stmt(&mut self) -> Result<Stmt, ParseError> {
@@ -115,6 +127,29 @@ mod parser_tests {
         let expected_idents = ["x", "y", "foo"];
         for (idx, stmt) in program.statements.iter().enumerate() {
             assert!(matches!(stmt, Stmt::Let(let_stmt) if let_stmt.ident.name == expected_idents[idx]));
+        }
+    }
+
+    #[test]
+    fn test_return_statement() {
+        let input = r#"
+        return 5;
+return 10;
+return 993322;
+"#;
+
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+
+        let program = p.parse_program();
+
+        assert_eq!(false, program.is_err());
+
+        let program = program.unwrap();
+        assert_eq!(3, program.statements.len());
+
+        for (_, stmt) in program.statements.iter().enumerate() {
+            assert!(matches!(stmt, Stmt::Return(_)))
         }
     }
 }

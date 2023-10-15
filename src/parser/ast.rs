@@ -23,6 +23,7 @@ impl Program {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
     Let(Let),
+    Return(Option<Expr>),
     Expr(Expr),
 }
 
