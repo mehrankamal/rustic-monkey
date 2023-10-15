@@ -59,12 +59,12 @@ impl<'a> Parser<'a> {
         self.next_token();
 
         let ident = match self.cur_tok.clone() {
-            Token::Ident(name) => Ident{ name },
-            other => return Err(format!("{} is not an identifier", other))
-        };
+            Token::Ident(name) => Ok(Ident{ name }),
+            other=> Err(format!("Expected Ident token, got {}", other))
+        }?;
 
         self.next_token();
-        self.expect_peek(&Token::Assign)?;
+        self.expect_peek(Token::Assign)?;
 
         // TODO: To be wired with Expression parsing once done.
         while !self.curr_tok_is(&Token::Semicolon) {
@@ -78,14 +78,14 @@ impl<'a> Parser<'a> {
         self.cur_tok == *tok
     }
 
-    fn expect_peek(&mut self, tok: &Token) -> Result<(), ParseError>{
-        if self.cur_tok == *tok {
+    fn expect_peek(&mut self, tok: Token) -> Result<(), ParseError>{
+        return if self.cur_tok == tok {
             self.next_token();
             Ok(())
         } else {
-            let e = format!("expected peek token: {} got: {}", tok, self.cur_tok);
+            let e = format!("expected peek token: {} got: {}", tok, self.cur_tok.clone());
             Err(e)
-        }
+        };
     }
 }
 
@@ -107,7 +107,7 @@ mod parser_tests {
 
         let program = parser.parse_program();
 
-        assert_eq!(None, program.as_ref().err());
+        assert_eq!(false, program.is_err(), "Error occurred while parsing, got error: {}", program.err().unwrap());
 
         let program = program.unwrap();
         assert_eq!(program.statements.len(), 3);

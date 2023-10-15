@@ -41,6 +41,6 @@ pub enum Token {
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "kind: {}", self)
+        write!(f, "TokenType({:?})", self)
     }
 }
