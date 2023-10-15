@@ -1,17 +1,23 @@
 mod ast;
 
-use std::fmt::format;
+use std::collections::HashMap;
 use crate::lexer::Lexer;
-use crate::parser::ast::{Ident, Let, Program, Stmt};
+use crate::parser::ast::{Expr, Ident, Let, Program, Stmt};
 use crate::token::Token;
 
 type ParseError = String;
+
+type PrefixParseFn = fn() -> ast::Expr;
+type InfixParseFn = fn(left: ast::Expr) -> ast::Expr;
 
 pub struct Parser<'a> {
     l: Lexer<'a>,
 
     cur_tok: Token,
     peek_tok: Token,
+
+    prefix_fns: HashMap<Token, PrefixParseFn>,
+    infix_fns: HashMap<Token, InfixParseFn>,
 }
 
 impl<'a> Parser<'a> {
@@ -21,14 +27,24 @@ impl<'a> Parser<'a> {
 
             cur_tok: Token::Illegal,
             peek_tok: Token::Illegal,
+
+            prefix_fns: HashMap::new(),
+            infix_fns: HashMap::new(),
         };
 
         parser.next_token();
         parser.next_token();
-        
+
         return parser;
     }
 
+    fn register_prefix_fn(&mut self, token: Token, fun: PrefixParseFn) {
+        self.prefix_fns.insert(token, fun);
+    }
+
+    fn register_infix_fn(&mut self, token: Token, fun: InfixParseFn) {
+        self.infix_fns.insert(token, fun);
+    }
 
     fn next_token(&mut self) {
         self.cur_tok = self.peek_tok.clone();
@@ -52,8 +68,16 @@ impl<'a> Parser<'a> {
         match self.cur_tok {
             Token::Let => Ok(self.parse_let_stmt()?),
             Token::Return => Ok(self.parse_return_stmt()?),
-            _ => Err("Parsing failed".to_string()),
+            _ => Ok(self.parse_expression_stmt()?),
         }
+    }
+
+    fn parse_expression_stmt(&mut self) -> Result<Stmt, ParseError> {
+        if self.peek_tok_is(&Token::Semicolon) {
+            self.next_token();
+        }
+
+        Ok(Stmt::Expr(Expr::Ident(Ident{name: "foobar".to_string()})))
     }
 
     fn parse_return_stmt(&mut self) -> Result<Stmt, ParseError> {
@@ -90,6 +114,10 @@ impl<'a> Parser<'a> {
         self.cur_tok == *tok
     }
 
+    fn peek_tok_is(&self, tok: &Token) -> bool {
+        self.peek_tok == *tok
+    }
+
     fn expect_peek(&mut self, tok: Token) -> Result<(), ParseError>{
         return if self.cur_tok == tok {
             self.next_token();
@@ -104,7 +132,7 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod parser_tests {
     use crate::lexer::Lexer;
-    use crate::parser::ast::{Stmt};
+    use crate::parser::ast::{Expr, Stmt};
     use crate::parser::{Parser};
 
     #[test]
@@ -151,5 +179,24 @@ return 993322;
         for (_, stmt) in program.statements.iter().enumerate() {
             assert!(matches!(stmt, Stmt::Return(_)))
         }
+    }
+
+    #[test]
+    fn test_identifier_expressions() {
+        let input = r#"foobar;"#;
+
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+
+        let program = p.parse_program();
+
+        assert_eq!(false, program.is_err());
+
+        let program = program.unwrap();
+        assert_eq!(1, program.statements.len());
+
+        assert!(matches!(program.statements[0].clone(), Stmt::Expr(expr) if
+                                                    matches!(&expr, Expr::Ident(ident) if
+                                                                *ident.name == "foobar".to_string())));
     }
 }
