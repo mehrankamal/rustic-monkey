@@ -29,6 +29,8 @@ pub enum Stmt {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Let {
     pub ident: Ident,
+
+    // TODO: Remove Option once expression parsing is done.
     pub expr: Option<Expr>
 }
 
