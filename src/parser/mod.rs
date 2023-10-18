@@ -1,6 +1,5 @@
 mod ast;
 
-use std::collections::HashMap;
 use crate::lexer::Lexer;
 use crate::parser::ast::{Expr, ExprPrecedence, Ident, Let, Program, Stmt};
 use crate::token::Token;
@@ -70,13 +69,13 @@ impl<'a> Parser<'a> {
 
         let left = self.parse_prefix_expression()?;
 
-
         Ok(left)
     }
 
     fn parse_prefix_expression(&mut self) -> Result<Expr, ParseError> {
         match self.cur_tok.clone() {
             Token::Ident(name) => Ok(self.parse_ident_expr(name.clone())?),
+            Token::Int(value) => Ok(Expr::IntLiteral(value)),
             _ => Err(format!("No Prefix parse function registered for {}", self.cur_tok))
         }
     }
@@ -206,6 +205,29 @@ return 993322;
             assert!(matches!(statement, Stmt::Expr(expr) if
                                                         matches!(&expr, Expr::Ident(ident) if
                                                                     *ident.name == expected_idents[idx].to_string())));
+        }
+    }
+
+    #[test]
+    fn test_integer_literal_expressions() {
+        let input = r#"10; 11;"#;
+
+        let l = Lexer::new(input);
+        let mut p = Parser::new(l);
+
+        let program = p.parse_program();
+
+        assert_eq!(false, program.is_err(), "Error occurred while parsing, got error: {}", program.err().unwrap());
+
+        let program = program.unwrap();
+
+        let expected_ints: [i64; 2] = [10, 11];
+        assert_eq!(expected_ints.len(), program.statements.len());
+
+        for (idx, statement) in program.statements.iter().enumerate() {
+            assert!(matches!(statement, Stmt::Expr(expr) if
+                                                        matches!(&expr, Expr::IntLiteral(number) if
+                                                                    *number == expected_ints[idx])));
         }
     }
 }

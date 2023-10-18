@@ -38,6 +38,7 @@ pub struct Let {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
     Ident(Ident),
+    IntLiteral(i64),
 }
 
 #[derive(Clone, Debug, PartialEq)]
