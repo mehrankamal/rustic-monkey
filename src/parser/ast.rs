@@ -45,3 +45,14 @@ pub struct Ident {
     pub name: String
 }
 
+
+pub enum ExprPrecedence {
+    LOW,
+    EQUALS, // ==
+    COMPARE, // > or <
+    SUM, // +
+    PRODUCT, // *
+    PREFIX, // -X or !X
+    CALL,
+}
+

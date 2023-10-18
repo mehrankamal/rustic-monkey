@@ -2,22 +2,17 @@ mod ast;
 
 use std::collections::HashMap;
 use crate::lexer::Lexer;
-use crate::parser::ast::{Expr, Ident, Let, Program, Stmt};
+use crate::parser::ast::{Expr, ExprPrecedence, Ident, Let, Program, Stmt};
 use crate::token::Token;
 
 type ParseError = String;
 
-type PrefixParseFn = fn() -> ast::Expr;
-type InfixParseFn = fn(left: ast::Expr) -> ast::Expr;
 
 pub struct Parser<'a> {
     l: Lexer<'a>,
 
     cur_tok: Token,
     peek_tok: Token,
-
-    prefix_fns: HashMap<Token, PrefixParseFn>,
-    infix_fns: HashMap<Token, InfixParseFn>,
 }
 
 impl<'a> Parser<'a> {
@@ -27,23 +22,12 @@ impl<'a> Parser<'a> {
 
             cur_tok: Token::Illegal,
             peek_tok: Token::Illegal,
-
-            prefix_fns: HashMap::new(),
-            infix_fns: HashMap::new(),
         };
 
         parser.next_token();
         parser.next_token();
 
         return parser;
-    }
-
-    fn register_prefix_fn(&mut self, token: Token, fun: PrefixParseFn) {
-        self.prefix_fns.insert(token, fun);
-    }
-
-    fn register_infix_fn(&mut self, token: Token, fun: InfixParseFn) {
-        self.infix_fns.insert(token, fun);
     }
 
     fn next_token(&mut self) {
@@ -73,11 +57,32 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression_stmt(&mut self) -> Result<Stmt, ParseError> {
+        let expression = self.parse_expression(ExprPrecedence::LOW)?;
+
         if self.peek_tok_is(&Token::Semicolon) {
             self.next_token();
         }
 
-        Ok(Stmt::Expr(Expr::Ident(Ident{name: "foobar".to_string()})))
+        Ok(Stmt::Expr(expression))
+    }
+
+    fn parse_expression(&mut self, precedence: ExprPrecedence) -> Result<Expr, ParseError> {
+
+        let left = self.parse_prefix_expression()?;
+
+
+        Ok(left)
+    }
+
+    fn parse_prefix_expression(&mut self) -> Result<Expr, ParseError> {
+        match self.cur_tok.clone() {
+            Token::Ident(name) => Ok(self.parse_ident_expr(name.clone())?),
+            _ => Err(format!("No Prefix parse function registered for {}", self.cur_tok))
+        }
+    }
+
+    fn parse_ident_expr(&mut self, ident_name: String) -> Result<Expr, ParseError> {
+        Ok(Expr::Ident(Ident { name: ident_name}))
     }
 
     fn parse_return_stmt(&mut self) -> Result<Stmt, ParseError> {
@@ -183,20 +188,24 @@ return 993322;
 
     #[test]
     fn test_identifier_expressions() {
-        let input = r#"foobar;"#;
+        let input = r#"foobar; gmail;"#;
 
         let l = Lexer::new(input);
         let mut p = Parser::new(l);
 
         let program = p.parse_program();
 
-        assert_eq!(false, program.is_err());
+        assert_eq!(false, program.is_err(), "Error occurred while parsing, got error: {}", program.err().unwrap());
 
         let program = program.unwrap();
-        assert_eq!(1, program.statements.len());
 
-        assert!(matches!(program.statements[0].clone(), Stmt::Expr(expr) if
-                                                    matches!(&expr, Expr::Ident(ident) if
-                                                                *ident.name == "foobar".to_string())));
+        let expected_idents = ["foobar", "gmail"];
+        assert_eq!(expected_idents.len(), program.statements.len());
+
+        for (idx, statement) in program.statements.iter().enumerate() {
+            assert!(matches!(statement, Stmt::Expr(expr) if
+                                                        matches!(&expr, Expr::Ident(ident) if
+                                                                    *ident.name == expected_idents[idx].to_string())));
+        }
     }
 }
