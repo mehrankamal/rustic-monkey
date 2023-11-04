@@ -1,7 +1,8 @@
 mod ast;
 
+use std::slice::RSplit;
 use crate::lexer::Lexer;
-use crate::parser::ast::{Expr, ExprPrecedence, Ident, Let, Program, Stmt};
+use crate::parser::ast::{Expr, ExprPrecedence, Ident, Let, PrefixOperator, Program, Stmt};
 use crate::token::Token;
 
 type ParseError = String;
@@ -76,8 +77,32 @@ impl<'a> Parser<'a> {
         match self.cur_tok.clone() {
             Token::Ident(name) => Ok(self.parse_ident_expr(name.clone())?),
             Token::Int(value) => Ok(Expr::IntLiteral(value)),
+            Token::Bang => self.parse_bang_expr(),
+            Token::Minus => self.parse_negate_expr(),
             _ => Err(format!("No Prefix parse function registered for {}", self.cur_tok))
         }
+    }
+
+    fn parse_negate_expr(&mut self) -> Result<Expr, ParseError> {
+        let operator = PrefixOperator::Negate;
+        self.next_token();
+        let right_expression = self.parse_expression(ExprPrecedence::PREFIX)?;
+
+        Ok(Expr::PrefixExpr {
+            expr: Box::new(right_expression),
+            operator: Some(operator),
+        })
+    }
+
+    fn parse_bang_expr(&mut self) -> Result<Expr, ParseError> {
+        let operator = PrefixOperator::Not;
+        self.next_token();
+        let right_expression = self.parse_expression(ExprPrecedence::PREFIX)?;
+
+        Ok(Expr::PrefixExpr {
+            expr: Box::new(right_expression),
+            operator: Some(operator),
+        })
     }
 
     fn parse_ident_expr(&mut self, ident_name: String) -> Result<Expr, ParseError> {
@@ -135,8 +160,9 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod parser_tests {
+    use std::path::Component::Prefix;
     use crate::lexer::Lexer;
-    use crate::parser::ast::{Expr, Stmt};
+    use crate::parser::ast::{Expr, PrefixOperator, Stmt};
     use crate::parser::{Parser};
 
     #[test]
@@ -228,6 +254,52 @@ return 993322;
             assert!(matches!(statement, Stmt::Expr(expr) if
                                                         matches!(&expr, Expr::IntLiteral(number) if
                                                                     *number == expected_ints[idx])));
+        }
+    }
+
+    struct PrefixParseTestCase<'a> {
+        input: &'a str,
+        operator: &'a str,
+        literal_value: i64,
+        expected_operator: PrefixOperator
+    }
+
+    #[test]
+    fn test_parse_prefix_expressions() {
+        let mut test_cases:Vec<PrefixParseTestCase> = Vec::new();
+
+        test_cases.push(PrefixParseTestCase{input: "!5", operator: "!", literal_value: 5, expected_operator: PrefixOperator::Not});
+        test_cases.push(PrefixParseTestCase{input: "-5", operator: "-", literal_value: 5, expected_operator: PrefixOperator::Negate});
+
+        for test_case in test_cases {
+            let l = Lexer::new(test_case.input);
+            let mut p = Parser::new(l);
+
+            let program = p.parse_program();
+
+            assert_eq!(false, program.is_err(), "Error occurred while parsing, got error: {}", program.err().unwrap());
+
+            let program = program.unwrap();
+
+            assert_eq!(1, program.statements.len());
+
+
+            assert!(
+                matches!(program.statements[0].clone(), Stmt::Expr(expr)
+                    if matches!(&expr,Expr::PrefixExpr { expr: prefixExpr, operator: oper }
+                        if matches!(oper, Some(operator)
+                            if *operator == test_case.expected_operator)
+                        && matches! (**(prefixExpr), Expr::IntLiteral(literal_value)
+                            if (literal_value == test_case.literal_value))
+                    )
+                )
+            );
+
+            // assert_eq!(matches!(program.statements[0].clone(), Stmt::Expr(expr) if
+                                                // matches!(&expr, Expr::PrefixExpr {expr: prefixExpr, operator: oper} if oper == test_case.expected_operator
+                                                            // && matches!(**(prefixExpr.clone()), Expr::IntLiteral(literal_value) if literal_value == test_case.literal_value))))
+            // assert!(matches!(program.statements[0].clone(), Stmt::Expr(expr) if matches!(&expr, Expr::PrefixExpr{expr: expr, operator: operator} if
+            //                                                                 matches!(expr, if (*val == test_case.literal_value) ));
         }
     }
 }

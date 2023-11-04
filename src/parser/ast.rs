@@ -39,6 +39,16 @@ pub struct Let {
 pub enum Expr {
     Ident(Ident),
     IntLiteral(i64),
+    PrefixExpr{
+        expr: Box<Expr>,
+        operator: Option<PrefixOperator>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PrefixOperator {
+    Not,
+    Negate,
 }
 
 #[derive(Clone, Debug, PartialEq)]
