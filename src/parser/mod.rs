@@ -294,12 +294,6 @@ return 993322;
                     )
                 )
             );
-
-            // assert_eq!(matches!(program.statements[0].clone(), Stmt::Expr(expr) if
-                                                // matches!(&expr, Expr::PrefixExpr {expr: prefixExpr, operator: oper} if oper == test_case.expected_operator
-                                                            // && matches!(**(prefixExpr.clone()), Expr::IntLiteral(literal_value) if literal_value == test_case.literal_value))))
-            // assert!(matches!(program.statements[0].clone(), Stmt::Expr(expr) if matches!(&expr, Expr::PrefixExpr{expr: expr, operator: operator} if
-            //                                                                 matches!(expr, if (*val == test_case.literal_value) ));
         }
     }
 }
