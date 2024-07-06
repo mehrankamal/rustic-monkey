@@ -1,6 +1,9 @@
 use std::{env, io};
 use std::io::Write;
 
+#[macro_use]
+extern crate lazy_static;
+
 mod token;
 mod lexer;
 mod repl;

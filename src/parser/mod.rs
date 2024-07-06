@@ -1,5 +1,9 @@
 mod ast;
 
+use std::collections::HashMap;
+
+use ast::InfixOperator;
+
 use crate::lexer::Lexer;
 use crate::parser::ast::{Expr, ExprPrecedence, Ident, Let, PrefixOperator, Program, Stmt};
 use crate::token::Token;
@@ -11,6 +15,22 @@ pub struct Parser<'a> {
 
     cur_tok: Token,
     peek_tok: Token,
+}
+
+lazy_static! {
+    static ref PRECEDENCES: HashMap<Token, ExprPrecedence> = {
+        let mut map = HashMap::new();
+        map.insert(Token::Eq, ExprPrecedence::EQUALS);
+        map.insert(Token::NotEq, ExprPrecedence::EQUALS);
+        map.insert(Token::LT, ExprPrecedence::COMPARE);
+        map.insert(Token::GT, ExprPrecedence::COMPARE);
+        map.insert(Token::Plus, ExprPrecedence::SUM);
+        map.insert(Token::Minus, ExprPrecedence::SUM);
+        map.insert(Token::Slash, ExprPrecedence::PRODUCT);
+        map.insert(Token::Asterisk, ExprPrecedence::PRODUCT);
+        map.insert(Token::LParen, ExprPrecedence::CALL);
+        map
+    };
 }
 
 impl<'a> Parser<'a> {
@@ -66,7 +86,12 @@ impl<'a> Parser<'a> {
 
     fn parse_expression(&mut self, precedence: ExprPrecedence) -> Result<Expr, ParseError> {
 
-        let left = self.parse_prefix_expression()?;
+        let mut left = self.parse_prefix_expression()?;
+
+        while !self.peek_tok_is(&Token::Semicolon) && precedence < self.peek_precedence() {
+            self.next_token();
+            left = self.parse_infix_expression(left)?;
+        }
 
         Ok(left)
     }
@@ -79,6 +104,27 @@ impl<'a> Parser<'a> {
             Token::Minus => self.parse_negate_expr(),
             _ => Err(format!("No Prefix parse function registered for {}", self.cur_tok))
         }
+    }
+
+    fn parse_infix_expression(&mut self, left: Expr) -> Result<Expr, ParseError> {
+        let operator = match self.cur_tok {
+            Token::Eq => InfixOperator::Equals,
+            Token::NotEq => InfixOperator::NotEquals,
+            Token::GT => InfixOperator::GreaterThan,
+            Token::LT => InfixOperator::LessThan,
+            Token::Plus => InfixOperator::Add,
+            Token::Minus => InfixOperator::Sub,
+            Token::Slash => InfixOperator::Div,
+            Token::Asterisk => InfixOperator::Mul,
+            _ => Err(format!("No Infix parse function registered for {}", self.cur_tok))?
+        };
+
+        let precedence = self.curr_precedence();
+        self.next_token();
+        let right = self.parse_expression(precedence)?;
+
+        Ok(Expr::InfixExpr { left: Box::new(left), right: Box::new(right), operator:  operator})
+
     }
 
     fn parse_negate_expr(&mut self) -> Result<Expr, ParseError> {
@@ -145,6 +191,20 @@ impl<'a> Parser<'a> {
         self.peek_tok == *tok
     }
 
+    fn peek_precedence(&self) -> ExprPrecedence {
+        match PRECEDENCES.get(&self.peek_tok) {
+            Some(precedence) => precedence.clone(),
+            None => ExprPrecedence::LOW,
+        }
+    }
+
+    fn curr_precedence(&self) -> ExprPrecedence {
+        match PRECEDENCES.get(&self.cur_tok) {
+            Some(precedence) => precedence.clone(),
+            None => ExprPrecedence::LOW,
+        }
+    }
+
     fn expect_peek(&mut self, tok: Token) -> Result<(), ParseError>{
         return if self.cur_tok == tok {
             self.next_token();
@@ -161,6 +221,8 @@ mod parser_tests {
     use crate::lexer::Lexer;
     use crate::parser::ast::{Expr, PrefixOperator, Stmt};
     use crate::parser::Parser;
+
+    use super::ast::InfixOperator;
 
     #[test]
     fn test_let_statement() {
@@ -293,5 +355,47 @@ return 993322;
         }
     }
 
+    struct InfixParseTestCase<'a> {
+        input: &'a str,
+        left_value: i64,
+        operator: InfixOperator,
+        right_value: i64,
+    }
 
+    #[test]
+    fn test_parse_infix_expsressions() {
+        let mut test_cases:Vec<InfixParseTestCase> = Vec::new();
+        test_cases.push(InfixParseTestCase{input: "5 + 5", left_value: 5, operator: InfixOperator::Add, right_value: 5});
+        test_cases.push(InfixParseTestCase{input: "5 - 5", left_value: 5, operator: InfixOperator::Sub, right_value: 5});
+        test_cases.push(InfixParseTestCase{input: "5 * 5", left_value: 5, operator: InfixOperator::Mul, right_value: 5});
+        test_cases.push(InfixParseTestCase{input: "5 / 5", left_value: 5, operator: InfixOperator::Div, right_value: 5});
+        test_cases.push(InfixParseTestCase{input: "5 == 5", left_value: 5, operator: InfixOperator::Equals, right_value: 5});
+        test_cases.push(InfixParseTestCase{input: "5 != 5", left_value: 5, operator: InfixOperator::NotEquals, right_value: 5});
+        test_cases.push(InfixParseTestCase{input: "5 < 5", left_value: 5, operator: InfixOperator::LessThan, right_value: 5});
+        test_cases.push(InfixParseTestCase{input: "5 > 5", left_value: 5, operator: InfixOperator::GreaterThan, right_value: 5});
+
+        for test_case in test_cases {
+            let lexer = Lexer::new(test_case.input);
+            let mut parser = Parser::new(lexer);
+
+            let program = parser.parse_program().unwrap();
+
+            assert_eq!(1, program.statements.len());
+
+            dbg!(test_case.input);
+            dbg!(&program);
+
+            let stmt = program.statements[0].clone();
+            assert!(matches!(stmt, Stmt::Expr(expr) if
+                matches!(&expr, Expr::InfixExpr { left: left_expr, operator: oper, right: right_expr }
+                    if matches!(**left_expr, Expr::IntLiteral(left_value)
+                        if left_value == test_case.left_value)
+                    && matches!(**right_expr, Expr::IntLiteral(right_value)
+                        if right_value == test_case.right_value)
+                    && *oper == test_case.operator
+                )
+            ));
+            dbg!(&"Passed");
+        }
+    }
 }

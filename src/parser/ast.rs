@@ -1,3 +1,5 @@
+use std::collections::hash_map;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     Program(Program),
@@ -43,6 +45,11 @@ pub enum Expr {
         expr: Box<Expr>,
         operator: Option<PrefixOperator>,
     },
+    InfixExpr{
+        left: Box<Expr>,
+        right: Box<Expr>,
+        operator: InfixOperator,
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -52,11 +59,24 @@ pub enum PrefixOperator {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum InfixOperator {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Equals,
+    NotEquals,
+    LessThan,
+    GreaterThan,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct Ident {
     pub name: String
 }
 
 
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum ExprPrecedence {
     LOW,
     EQUALS, // ==
