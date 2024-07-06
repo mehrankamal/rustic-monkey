@@ -1,12 +1,10 @@
 mod ast;
 
-use std::slice::RSplit;
 use crate::lexer::Lexer;
 use crate::parser::ast::{Expr, ExprPrecedence, Ident, Let, PrefixOperator, Program, Stmt};
 use crate::token::Token;
 
 type ParseError = String;
-
 
 pub struct Parser<'a> {
     l: Lexer<'a>,
@@ -160,10 +158,9 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod parser_tests {
-    use std::path::Component::Prefix;
     use crate::lexer::Lexer;
     use crate::parser::ast::{Expr, PrefixOperator, Stmt};
-    use crate::parser::{Parser};
+    use crate::parser::Parser;
 
     #[test]
     fn test_let_statement() {
@@ -259,17 +256,16 @@ return 993322;
 
     struct PrefixParseTestCase<'a> {
         input: &'a str,
-        operator: &'a str,
+        operator: PrefixOperator,
         literal_value: i64,
-        expected_operator: PrefixOperator
     }
 
     #[test]
     fn test_parse_prefix_expressions() {
         let mut test_cases:Vec<PrefixParseTestCase> = Vec::new();
 
-        test_cases.push(PrefixParseTestCase{input: "!5", operator: "!", literal_value: 5, expected_operator: PrefixOperator::Not});
-        test_cases.push(PrefixParseTestCase{input: "-5", operator: "-", literal_value: 5, expected_operator: PrefixOperator::Negate});
+        test_cases.push(PrefixParseTestCase{input: "!5", operator: PrefixOperator::Not, literal_value: 5});
+        test_cases.push(PrefixParseTestCase{input: "-5", operator: PrefixOperator::Negate, literal_value: 5});
 
         for test_case in test_cases {
             let l = Lexer::new(test_case.input);
@@ -286,14 +282,16 @@ return 993322;
 
             assert!(
                 matches!(program.statements[0].clone(), Stmt::Expr(expr)
-                    if matches!(&expr,Expr::PrefixExpr { expr: prefixExpr, operator: oper }
+                    if matches!(&expr, Expr::PrefixExpr { expr: prefix_expr, operator: oper }
                         if matches!(oper, Some(operator)
-                            if *operator == test_case.expected_operator)
-                        && matches! (**(prefixExpr), Expr::IntLiteral(literal_value)
+                            if *operator == test_case.operator)
+                        && matches!(**(prefix_expr), Expr::IntLiteral(literal_value)
                             if (literal_value == test_case.literal_value))
                     )
                 )
             );
         }
     }
+
+
 }
