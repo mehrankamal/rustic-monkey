@@ -1,6 +1,20 @@
-use std::collections::HashMap;
 use crate::token::Token;
 use crate::token::Token::*;
+use std::collections::HashMap;
+
+lazy_static! {
+    static ref KEYWORDS: HashMap<String, Token> = {
+        let mut keywords_lookup = HashMap::new();
+        keywords_lookup.insert("fn".to_string(), Function);
+        keywords_lookup.insert("let".to_string(), Let);
+        keywords_lookup.insert("if".to_string(), If);
+        keywords_lookup.insert("else".to_string(), Else);
+        keywords_lookup.insert("return".to_string(), Return);
+        keywords_lookup.insert("true".to_string(), True);
+        keywords_lookup.insert("false".to_string(), False);
+        keywords_lookup
+    };
+}
 
 pub(crate) struct Lexer<'a> {
     input: &'a str,
@@ -11,7 +25,7 @@ pub(crate) struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     pub(crate) fn new(input: &str) -> Lexer {
-         let mut lexer =  Lexer {
+        let mut lexer = Lexer {
             input,
             position: 0,
             read_position: 0,
@@ -38,22 +52,24 @@ impl<'a> Lexer<'a> {
         self.skip_whitespaces();
 
         let tok = match self.ch {
-            b'=' => if self.peek_char(b'=') {
-                        self.consume_char();
-                        Eq
-                    } else {
-                        Assign
-                    }
-            ,
+            b'=' => {
+                if self.peek_char(b'=') {
+                    self.consume_char();
+                    Eq
+                } else {
+                    Assign
+                }
+            }
             b'+' => Plus,
             b'-' => Minus,
-            b'!' => if self.peek_char(b'=') {
-                        self.consume_char();
-                        NotEq
-                    } else {
-                        Bang
-                    }
-            ,
+            b'!' => {
+                if self.peek_char(b'=') {
+                    self.consume_char();
+                    NotEq
+                } else {
+                    Bang
+                }
+            }
             b'*' => Asterisk,
             b'/' => Slash,
             b'<' => LT,
@@ -69,18 +85,18 @@ impl<'a> Lexer<'a> {
             _ => {
                 if is_letter(self.ch) {
                     let ident_literal = self.consume_ident();
-                    return lookup_ident(&ident_literal)
+                    return lookup_ident(&ident_literal);
                 } else if is_digit(self.ch) {
-                    return self.consume_number()
+                    return self.consume_number();
                 } else {
                     Illegal
                 }
-            },
+            }
         };
 
         self.consume_char();
 
-        return tok
+        return tok;
     }
 
     fn skip_whitespaces(&mut self) {
@@ -95,7 +111,7 @@ impl<'a> Lexer<'a> {
             self.consume_char()
         }
 
-        return String::from(&self.input[current_position..self.position])
+        return String::from(&self.input[current_position..self.position]);
     }
 
     fn consume_number(&mut self) -> Token {
@@ -105,7 +121,9 @@ impl<'a> Lexer<'a> {
             self.consume_char()
         }
 
-        Int(self.input[start_position..self.position].parse::<i64>().unwrap())
+        Int(self.input[start_position..self.position]
+            .parse::<i64>()
+            .unwrap())
     }
 
     fn peek_char(&self, peek: u8) -> bool {
@@ -118,21 +136,9 @@ impl<'a> Lexer<'a> {
 }
 
 fn lookup_ident(name: &String) -> Token {
-    let mut keywords_lookup: HashMap<String, Token> = HashMap::new();
-    keywords_lookup.insert("fn".to_string(), Function);
-    keywords_lookup.insert("let".to_string(), Let);
-    keywords_lookup.insert("if".to_string(), If);
-    keywords_lookup.insert("else".to_string(), Else);
-    keywords_lookup.insert("return".to_string(), Return);
-    keywords_lookup.insert("true".to_string(), True);
-    keywords_lookup.insert("false".to_string(), False);
-
-
-
-    if keywords_lookup.contains_key(name) {
-        keywords_lookup[name].clone()
-    } else {
-        Ident(String::from(name))
+    match KEYWORDS.get(name) {
+        Some(keyword) => keyword.clone(),
+        None => Ident(String::from(name))
     }
 }
 
@@ -246,7 +252,7 @@ if (5 < 10) {
             NotEq,
             Int(9),
             Semicolon,
-            Eof
+            Eof,
         ];
 
         let mut lexer = Lexer::new(input);
@@ -256,6 +262,5 @@ if (5 < 10) {
 
             assert_eq!(token, test_case)
         }
-
     }
 }
